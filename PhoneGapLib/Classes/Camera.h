@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "PhoneGapCommand.h"
+#import <MobileCoreServices/UTCoreTypes.h>
 
 @interface CameraPicker : UIImagePickerController
 {
@@ -39,10 +40,12 @@
  * options:
  *	quality: integer between 1 and 100
  */
+- (void) getMovie:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 - (void) getPicture:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 - (void) postImage:(UIImage*)anImage withFilename:(NSString*)filename toUrl:(NSURL*)url;
 
-- (void)imagePickerController:(UIImagePickerController*)picker didFinishPickingImage:(UIImage*)image editingInfo:(NSDictionary*)editingInfo;
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info;
+//- (void)imagePickerController:(UIImagePickerController*)picker didFinishPickingImage:(UIImage*)image editingInfo:(NSDictionary*)editingInfo;
 - (void)imagePickerControllerDidCancel:(UIImagePickerController*)picker;
 
 - (void) dealloc;

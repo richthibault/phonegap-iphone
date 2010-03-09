@@ -12,6 +12,62 @@
 
 @implementation Camera
 
+- (void) getMovie:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options
+{
+	NSUInteger argc = [arguments count];
+	NSString* successCallback = nil, *errorCallback = nil;
+	
+	if (argc > 0) successCallback = [arguments objectAtIndex:0];
+	if (argc > 1) errorCallback = [arguments objectAtIndex:1];
+	
+	if (argc < 1) {
+		NSLog(@"Camera.getMovie: Missing 1st parameter.");
+		return;
+	}
+	
+	NSString* sourceTypeString = [options valueForKey:@"sourceType"];
+	UIImagePickerControllerSourceType sourceType = UIImagePickerControllerSourceTypeCamera; // default
+	if (sourceTypeString != nil) {
+		sourceType = (UIImagePickerControllerSourceType)[sourceTypeString intValue];
+	}
+	
+	bool hasCamera = [UIImagePickerController isSourceTypeAvailable:sourceType];
+	if (!hasCamera) {
+		NSLog(@"Camera.getMovie: source type %d not available.", sourceType);
+		return;
+	}
+	
+	if (pickerController == nil) {
+		pickerController = [[CameraPicker alloc] init];
+	}
+	
+	pickerController.delegate = self;
+	pickerController.sourceType = sourceType;
+	
+	// get all media types and make sure movie is one of them
+	pickerController.mediaTypes =[UIImagePickerController availableMediaTypesForSourceType:pickerController.sourceType];
+	
+	NSLog(@"Camera.getMovie: got %d media types.", [pickerController.mediaTypes count]);
+	
+	if(![pickerController.mediaTypes containsObject:(NSString *)kUTTypeMovie]) {
+		NSLog(@"Camera.getMovie: video not available.");
+		if (errorCallback) {
+			NSString* jsString = [[NSString alloc] initWithFormat:@"%@(\"%@\");", errorCallback, @"Video is not available on this device."];
+			[webView stringByEvaluatingJavaScriptFromString:jsString];
+			[jsString release];
+		}
+		return;
+	}
+	
+	// limit to "movie"
+	pickerController.mediaTypes = [NSArray arrayWithObject:(NSString *)kUTTypeMovie];
+	pickerController.successCallback = successCallback;
+	pickerController.errorCallback = errorCallback;
+	pickerController.quality = [options integerValueForKey:@"quality" defaultValue:100 withRange:NSMakeRange(0, 100)];
+	
+	[[super appViewController] presentModalViewController:pickerController animated:YES];
+}
+
 - (void) getPicture:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options
 {
 	NSUInteger argc = [arguments count];
@@ -50,12 +106,34 @@
 	[[super appViewController] presentModalViewController:pickerController animated:YES];
 }
 
-- (void)imagePickerController:(UIImagePickerController*)picker didFinishPickingImage:(UIImage*)image editingInfo:(NSDictionary*)editingInfo
+/*- (void)imagePickerController:(UIImagePickerController*)picker didFinishPickingImage:(UIImage*)image editingInfo:(NSDictionary*)editingInfo
 {
 	CameraPicker* cameraPicker = (CameraPicker*)picker;
 	CGFloat quality = (double)cameraPicker.quality / 100.0; 
 	NSData* data = UIImageJPEGRepresentation(image, quality);
 
+	[picker dismissModalViewControllerAnimated:YES];
+	
+	if (cameraPicker.successCallback) {
+		NSString* jsString = [[NSString alloc] initWithFormat:@"%@(\"%@\");", cameraPicker.successCallback, [data base64EncodedString]];
+		[webView stringByEvaluatingJavaScriptFromString:jsString];
+		[jsString release];
+	}
+}*/
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
+	NSString *mediaType = [info objectForKey:UIImagePickerControllerMediaType];
+	NSData* data;
+	CameraPicker* cameraPicker = (CameraPicker*)picker;
+	CGFloat quality = (double)cameraPicker.quality / 100.0; 
+	if ([mediaType isEqualToString:@"public.image"]){
+		UIImage *image = [info objectForKey:@"UIImagePickerControllerOriginalImage"];
+		data = UIImageJPEGRepresentation(image, quality);
+	} else if ([mediaType isEqualToString:@"public.movie"]){
+		NSURL *mediaURL	= [info objectForKey:UIImagePickerControllerMediaURL];
+		data = [NSData dataWithContentsOfURL:mediaURL];
+	}
+	
 	[picker dismissModalViewControllerAnimated:YES];
 	
 	if (cameraPicker.successCallback) {
