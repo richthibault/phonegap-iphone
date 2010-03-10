@@ -24,19 +24,16 @@ Notification.prototype.beep = function(count, volume) {
 	new Media('beep.wav').play();
 };
 
-/**
- * Open a native alert dialog, with a customizable title and button text.
- * @param {String} message Message to print in the body of the alert
- * @param {String} [title="Alert"] Title of the alert dialog (default: Alert)
- * @param {String} [buttonLabel="OK"] Label of the close button (default: OK)
- */
-Notification.prototype.alert = function(message, title, buttonLabel) {
-    var options = {};
-    if (title) options.title = title;
-    if (buttonLabel) options.buttonLabel = buttonLabel;
+Notification.prototype.alert = function(message, title, okLabel, cancelLabel, options) {
+    var args = {};
+    if (title) args.title = title;
+    if (okLabel) args.okLabel = okLabel;
+    if (cancelLabel) args.cancelLabel = cancelLabel;
+    if (typeof(options) == 'object' && "onClose" in options)
+        args.onClose = PhoneGap.registerCallback(options.onClose);
 
     if (PhoneGap.available)
-        PhoneGap.exec('Notification.alert', message, options);
+        PhoneGap.exec('Notification.alert', message, args);
     else
         alert(message);
 };
