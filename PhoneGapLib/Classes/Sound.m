@@ -9,6 +9,8 @@
 #import "Sound.h"
 #import "PhonegapDelegate.h"
 
+#include <CoreAudio/CoreAudioTypes.h>
+
 #define DOCUMENTS_SCHEME_PREFIX		@"documents://"
 #define HTTP_SCHEME_PREFIX			@"http://"
 
@@ -74,6 +76,7 @@
 // Creates or gets the cached audio file resource object
 - (AudioFile*) audioFileForResource:(NSString*) resourcePath
 {
+	NSLog(@"resourcePath='%@'",resourcePath);
 	NSURL* resourceURL = [self urlForResource:resourcePath];
 	if([resourcePath isEqualToString:@""]){
 		NSLog(@"Cannot play empty URI");
@@ -124,6 +127,7 @@
 	
 	if (argc > 1) audioFile.successCallback = [arguments objectAtIndex:1];
 	if (argc > 2) audioFile.errorCallback = [arguments objectAtIndex:2];
+	if (argc > 3) audioFile.finishPlayingCallback = [arguments objectAtIndex:3];
 	
 	[soundCache setObject:audioFile forKey:audioFile.resourcePath];
 	if (audioFile.player != nil) {
@@ -158,6 +162,7 @@
 			NSError* error;
 			// try loading it one more time, in case the file was recorded previously
 			audioFile.player = [[ AVAudioPlayer alloc ] initWithContentsOfURL:audioFile.resourceURL error:&error];
+			audioFile.player.delegate = self;  // RT need to set the delegate so audioPlayerDidFinishPlaying gets called
 			if (error != nil) {
 				NSLog(@"Failed to initialize AVAudioPlayer: %@\n", error);
 				audioFile.player = nil;
@@ -210,8 +215,15 @@
 		[audioFile.recorder stop];
 		audioFile.recorder = nil;
 	}
-		
-	audioFile.recorder = [[AVAudioRecorder alloc] initWithURL:audioFile.resourceURL settings:nil error:&error];
+	
+	NSMutableDictionary* recordSetting = [[NSMutableDictionary alloc] init];
+
+	// RT 3/20/10 use AppleIMA4 because it compresses 4:1.  ffmpeg can convert to mp3 later.  use 16KHz and 1 channel (no stereo)
+	[recordSetting setValue:[NSNumber numberWithInt:kAudioFormatAppleIMA4] forKey:AVFormatIDKey]; //kAudioFormatMPEGLayer3
+	[recordSetting setValue:[NSNumber numberWithFloat:16000.0] forKey:AVSampleRateKey]; //44100.0
+	[recordSetting setValue:[NSNumber numberWithInt: 1] forKey:AVNumberOfChannelsKey];
+
+	audioFile.recorder = [[AVAudioRecorder alloc] initWithURL:audioFile.resourceURL settings:recordSetting error:&error];
 	
 	if (error != nil) {
 		NSLog(@"Failed to initialize AVAudioRecorder: %@\n", error);
@@ -239,22 +251,30 @@
 - (void)audioRecorderDidFinishRecording:(AVAudioRecorder*)recorder successfully:(BOOL)flag
 {
 	NSString* resourcePath = [self resourceForUrl:recorder.url];
-	AudioFile* audioFile = [self audioFileForResource:[recorder.url path]];
+	AudioFile* audioFile = [self audioFileForResource:resourcePath];
+	//AudioFile* audioFile = [self audioFileForResource:[recorder.url path]];  // RT fixed 3/19/10.  url path is not the same as resourcePath.
 	NSLog(@"Finished recording audio sample '%@'", resourcePath);
 	
 	if (audioFile != nil) {
 		
 		if (flag){
+			NSLog(@"Success!");
 			if (audioFile.successCallback) {
-				NSString* jsString = [NSString stringWithFormat:@"(%@)(\"%@\");", audioFile.successCallback, resourcePath];
+				NSData* data = [NSData dataWithContentsOfURL:audioFile.resourceURL];
+				NSString* jsString = [NSString stringWithFormat:@"(%@)(\"%@\",\"%@\");", audioFile.successCallback, resourcePath, [data base64EncodedString]];
+				//NSLog(@"%@",[data base64EncodedString]);
+				//NSLog(@"About to do callback: '%@'", jsString);
 				[super writeJavascript:jsString];
 			}
 		} else {
+			NSLog(@"Failed!");
 			if (audioFile.errorCallback) {
 				NSString* jsString = [NSString stringWithFormat:@"(%@)(\"%@\");", audioFile.errorCallback, resourcePath];
 				[super writeJavascript:jsString];
 			}		
 		}
+	} else {
+		NSLog(@"Could not access audioFile after recording!");
 	}
 }
 
@@ -268,9 +288,10 @@
 	
 	if (audioFile != nil) {
 
+		// RT let's assume successCallback is for recording only - now using a third callback, finishPlayingCallback
 		if (flag){
 			if (audioFile.successCallback) {
-				NSString* jsString = [NSString stringWithFormat:@"(%@)(\"%@\");", audioFile.successCallback, resourcePath];
+				NSString* jsString = [NSString stringWithFormat:@"(%@)(\"%@\");", audioFile.finishPlayingCallback, resourcePath];
 				[super writeJavascript:jsString];
 			}
 		} else {
@@ -280,6 +301,14 @@
 			}		
 		}
 	}
+}
+
+// added RT 3/19/10.  front end needs to call this to clean up the file when done or disk space will get eaten up.
+- (void) deleteFile:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options
+{
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	[fileManager removeItemAtPath:[arguments objectAtIndex:0] error:NULL];	
+	NSLog(@"Deleted file '%@'",[arguments objectAtIndex:0]);
 }
 
 - (void) clearCaches
@@ -299,6 +328,7 @@
 @synthesize resourceURL;
 @synthesize successCallback;
 @synthesize errorCallback;
+@synthesize finishPlayingCallback;
 @synthesize player;
 #ifdef __IPHONE_3_0
 @synthesize recorder;
@@ -309,6 +339,7 @@
 	self.player = nil;
 	self.successCallback = nil;
 	self.errorCallback = nil;
+	self.finishPlayingCallback = nil;
 	
 	[super dealloc];
 }

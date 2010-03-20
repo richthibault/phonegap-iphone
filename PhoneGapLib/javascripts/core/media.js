@@ -4,17 +4,18 @@
  *
  */
  
-function Media(src, successCallback, errorCallback) {
+function Media(src, successCallback, errorCallback, stopPlayingCallback) {
 	
 	if (!src) {
 		src = "documents://" + String((new Date()).getTime()).replace(/\D/gi,''); // random
 	}
 	this.src = src;
 	this.successCallback = successCallback;
-	this.errorCallback = errorCallback;	
+	this.errorCallback = errorCallback;
+	this.stopPlayingCallback = stopPlayingCallback;
     
 	if (this.src != null) {
-		PhoneGap.exec("Sound.prepare", this.src, this.successCallback, this.errorCallback);
+		PhoneGap.exec("Sound.prepare", this.src, this.successCallback, this.errorCallback, this.stopPlayingCallback);
 	}
 }
  
@@ -45,6 +46,12 @@ Media.prototype.startAudioRecord = function(options) {
 Media.prototype.stopAudioRecord = function() {
 	if (this.src != null) {
 		PhoneGap.exec("Sound.stopAudioRecord", this.src);
+	}
+}
+
+Media.prototype.deleteFile = function() {
+	if (this.src != null) {
+		PhoneGap.exec("Sound.deleteFile", this.src);
 	}
 }
 

@@ -11,11 +11,13 @@
 #import <AVFoundation/AVFoundation.h>
 
 #import "PhoneGapCommand.h"
+#import "NSData+Base64.h"
 
 @interface AudioFile : NSObject
 {
 	NSString* successCallback;
 	NSString* errorCallback;
+	NSString* finishPlayingCallback;
 	NSString* resourcePath;
 	NSURL* resourceURL;
 	AVAudioPlayer* player;
@@ -28,6 +30,7 @@
 @property (nonatomic, copy) NSURL* resourceURL;
 @property (nonatomic, copy) NSString* successCallback;
 @property (nonatomic, copy) NSString* errorCallback;
+@property (nonatomic, copy) NSString* finishPlayingCallback;
 @property (nonatomic, retain) AVAudioPlayer* player;
 
 #ifdef __IPHONE_3_0
@@ -56,5 +59,7 @@
 - (void) startAudioRecord:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 - (void) stopAudioRecord:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 #endif
+
+- (void) deleteFile:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 
 @end
