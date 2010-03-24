@@ -96,7 +96,9 @@
 	if (pickerController == nil) {
 		pickerController = [[CameraPicker alloc] init];
 	}
-	
+
+	// limit to "image"
+	pickerController.mediaTypes = [NSArray arrayWithObject:(NSString *)kUTTypeImage];
 	pickerController.delegate = self;
 	pickerController.sourceType = sourceType;
 	pickerController.successCallback = successCallback;
