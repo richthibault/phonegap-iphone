@@ -55,12 +55,14 @@
         [self createTabBar:nil withDict:nil];
 
     CGFloat height = 49.0f;
+	CGFloat verticalShift = 69.0f;
     BOOL atBottom = YES;
     
     NSDictionary* tabSettings = [settings objectForKey:@"TabBarSettings"];
     if (tabSettings) {
         height   = [[tabSettings objectForKey:@"height"] floatValue];
         atBottom = [[tabSettings objectForKey:@"position"] isEqualToString:@"bottom"];
+		verticalShift = [[tabSettings objectForKey:@"verticalShift"] floatValue];
     }
     tabBar.hidden = NO;
 
@@ -70,7 +72,7 @@
      if (atBottom) {
          tabBarBounds = CGRectMake(
              webViewBounds.origin.x,
-             webViewBounds.origin.y + webViewBounds.size.height - height,
+             webViewBounds.origin.y + webViewBounds.size.height - verticalShift,
              webViewBounds.size.width,
              height
          );
@@ -78,7 +80,7 @@
             webViewBounds.origin.x,
             webViewBounds.origin.y,
             webViewBounds.size.width,
-            webViewBounds.size.height - height
+            webViewBounds.size.height - verticalShift
          );
      } else {
          tabBarBounds = CGRectMake(
@@ -170,9 +172,9 @@
     }
     
     if (item == nil) {
-        NSLog(@"Creating with custom image and title");
-        item = [[UITabBarItem alloc] initWithTitle:title image:[UIImage imageNamed:imageName] tag:tag];
-    }
+        //NSLog(@"Creating UITabBarItem with custom image=%@ and title=%@ tag=%@",imageName,title,tag);
+        item = [[UITabBarItem alloc] initWithTitle:title image:[UIImage imageNamed:imageName] tag:tag];	
+	}
 
     if ([options objectForKey:@"badge"])
         item.badgeValue = [options objectForKey:@"badge"];
@@ -196,8 +198,12 @@
 
     NSString  *name = [arguments objectAtIndex:0];
     UITabBarItem *item = [tabBarItems objectForKey:name];
-    if (item)
+    if (item) {
         item.badgeValue = [options objectForKey:@"badge"];
+		// watch for null value set in javascript and nil it out
+		if([item.badgeValue isEqualToString:@"null"])
+			item.badgeValue=nil;
+	}
 }
 
 /**
