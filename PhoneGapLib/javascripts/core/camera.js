@@ -37,6 +37,16 @@ Camera.prototype.getMovie = function(successCallback, errorCallback, options) {
 	PhoneGap.exec("Camera.getMovie", GetFunctionName(successCallback), GetFunctionName(errorCallback), options);
 }
 
+/**
+ * 
+ * @param {Function} successCallback
+ * @param {Function} errorCallback
+ * @param {Object} options
+ */
+Camera.prototype.postLastPickedImage = function(successCallback, errorCallback, options) {
+	PhoneGap.exec("Camera.postLastPickedImage", null, null, options);
+}
+
 PhoneGap.addConstructor(function() {
     if (typeof navigator.camera == "undefined") navigator.camera = new Camera();
 });

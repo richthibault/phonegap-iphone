@@ -28,7 +28,14 @@
 @interface Camera : PhoneGapCommand<UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 {
 	CameraPicker* pickerController;
+	NSData* lastImageData;
+	NSString* lastImageMimeType;
+	//NSMutableData* receivedData;
 }
+
+@property (readwrite,nonatomic,retain) NSData* lastImageData;
+@property (readwrite,nonatomic,retain) NSString* lastImageMimeType;
+//@property (readwrite,nonatomic,retain) NSMutableData* receivedData;
 
 /*
  * getPicture
@@ -42,6 +49,7 @@
  */
 - (void) getMovie:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 - (void) getPicture:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
+- (void) postLastPickedImage:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 - (void) postImage:(UIImage*)anImage withFilename:(NSString*)filename toUrl:(NSURL*)url;
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info;
